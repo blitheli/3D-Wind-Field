@@ -53,10 +53,7 @@ The panel is made with [dat.gui](https://github.com/dataarts/dat.gui) library, y
 ### This demo does not work on my device
 If possible, you should run this demo in Chrome on PC, because I did not test it in other browser or mobile device.
 
-If you got into trouble on other device(for example, mobile phone), you can check your WebGL implementation in [WebGL report](https://webglreport.com/). Check the "Supported Extensions" section, below extensions are at least required:
-- OES_texture_float
-- WEBGL_depth_texture extension
-- EXT_frag_depth
+If you got into trouble on other device(for example, mobile phone), check if your browser supports WebGL2 in [WebGL report](https://webglreport.com/) because this demo requires WebGL2.
 
 ### There is no particle or world terrian after starting the demo
 Please check the speed of your network connection. Open the development tools in your browser and refresh the website, then check if your browser is downloading the data in a very slow speed.
