@@ -32,6 +32,14 @@ class Wind3D {
             
             this.scene = this.viewer.scene;
             this.camera = this.viewer.camera;
+            
+            // 通知Panel初始化GUI（延迟一点确保widget已完全创建）
+            const that = this;
+            setTimeout(function() {
+                if (that.panel && typeof that.panel.initGUI === 'function') {
+                    that.panel.initGUI();
+                }
+            }, 200);
 
             // 设置时钟为当前时刻
             var now = Cesium.JulianDate.now();
@@ -59,6 +67,7 @@ class Wind3D {
 
         this.panel = panel;
         this.particleSystem = null;
+        this.mouseHandler = null;  // 用于存储鼠标事件处理器
 
         this.viewerParameters = {
             lonRange: new Cesium.Cartesian2(),
@@ -372,6 +381,143 @@ class Wind3D {
         window.addEventListener('layerOptionsChanged', function () {
             that.setGlobeLayer(that.panel.getUserInput());
         });
+        
+        // 添加鼠标移动事件监听，用于显示风速
+        this.setupMouseMoveListener();
+    }
+    
+    setupMouseMoveListener() {
+        const that = this;
+        // 如果已存在handler，先销毁
+        if (this.mouseHandler) {
+            this.mouseHandler.destroy();
+        }
+        
+        this.mouseHandler = new Cesium.ScreenSpaceEventHandler(this.scene.canvas);
+        
+        this.mouseHandler.setInputAction(function(movement) {
+            if (!that.panel || !that.panel.showWindSpeed) {
+                return;
+            }
+            
+            // 获取鼠标位置的经纬度
+            var cartesian = that.camera.pickEllipsoid(movement.endPosition, that.scene.globe.ellipsoid);
+            if (!cartesian) {
+                // 如果鼠标不在球面上，尝试从相机射线获取
+                var ray = that.camera.getPickRay(movement.endPosition);
+                if (ray) {
+                    var intersection = that.scene.globe.ellipsoid.intersect(ray);
+                    if (intersection) {
+                        cartesian = intersection;
+                    }
+                }
+            }
+            
+            if (cartesian) {
+                var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+                var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+                
+                // 更新面板显示的经纬度（使用字符串格式，确保显示小数位）
+                that.panel.mouseLongitude = longitude.toFixed(3);
+                that.panel.mouseLatitude = latitude.toFixed(3);
+                
+                // 获取风速数据
+                if (that.particleSystem && that.particleSystem.data) {
+                    var windData = that.getWindSpeedAtPosition(longitude, latitude);
+                    that.panel.windU = windData.u.toFixed(1);
+                    that.panel.windV = windData.v.toFixed(1);
+                } else {
+                    that.panel.windU = "0.0";
+                    that.panel.windV = "0.0";
+                }
+            }
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+        
+        // 监听显示风速开关的变化
+        window.addEventListener('showWindSpeedChanged', function(event) {
+            // 当关闭时，清空显示
+            if (!event.detail.enabled) {
+                that.panel.mouseLongitude = "0.000";
+                that.panel.mouseLatitude = "0.000";
+                that.panel.windU = "0.0";
+                that.panel.windV = "0.0";
+            }
+        });
+    }
+    
+    // 清理资源
+    destroy() {
+        if (this.mouseHandler) {
+            this.mouseHandler.destroy();
+            this.mouseHandler = null;
+        }
+        if (this.viewer && !this.viewer.isDestroyed()) {
+            this.viewer.destroy();
+        }
+    }
+    
+    // 根据经纬度从数据中插值获取U和V风速分量
+    getWindSpeedAtPosition(longitude, latitude) {
+        if (!this.particleSystem || !this.particleSystem.data) {
+            return { u: 0.0, v: 0.0 };
+        }
+        
+        var data = this.particleSystem.data;
+        var uArray = data.U.array;
+        var vArray = data.V.array;
+        var lonDim = data.dimensions.lon;
+        var latDim = data.dimensions.lat;
+        var levDim = data.dimensions.lev;
+        
+        // 使用第一个高度层（lev=0）的数据
+        var levIndex = 0;
+        
+        // 确保经度在有效范围内（NetCDF数据使用0-360范围）
+        var normalizedLon = ((longitude % 360) + 360) % 360;
+        if (normalizedLon > 180) {
+            normalizedLon = normalizedLon - 360;
+        }
+        
+        // 确保纬度在有效范围内
+        latitude = Math.max(-90, Math.min(90, latitude));
+        
+        // 检查是否在数据范围内
+        // 注意：如果数据经度范围是0-360，需要转换
+        var lonMin = data.lon.min;
+        var lonMax = data.lon.max;
+        var lonRange = lonMax - lonMin;
+        
+        // 如果数据范围是0-360，需要将longitude转换到该范围
+        if (lonMax > 180) {
+            normalizedLon = ((longitude % 360) + 360) % 360;
+        }
+        
+        if (normalizedLon < lonMin || normalizedLon > lonMax ||
+            latitude < data.lat.min || latitude > data.lat.max) {
+            return { u: 0.0, v: 0.0 };
+        }
+        
+        // 找到最近的网格点索引（简化版本，使用最近邻插值）
+        var lonIndex = Math.round((normalizedLon - lonMin) / (lonRange / (lonDim - 1)));
+        var latIndex = Math.round((latitude - data.lat.min) / ((data.lat.max - data.lat.min) / (latDim - 1)));
+        
+        lonIndex = Math.max(0, Math.min(lonDim - 1, lonIndex));
+        latIndex = Math.max(0, Math.min(latDim - 1, latIndex));
+        
+        // 计算在3D数组中的索引
+        // 数据维度顺序是 (lev, lat, lon)，netcdfjs按行优先读取
+        // 索引公式: index = levIndex * (latDim * lonDim) + latIndex * lonDim + lonIndex
+        var index = levIndex * (latDim * lonDim) + latIndex * lonDim + lonIndex;
+        
+        if (index >= 0 && index < uArray.length && index < vArray.length) {
+            return {
+                u: uArray[index],
+                v: vArray[index]
+            };
+        }
+        
+        return { u: 0.0, v: 0.0 };
     }
 
     debug() {
