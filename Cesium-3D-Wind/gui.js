@@ -2,8 +2,9 @@ var demo = Cesium.defaultValue(demo, false);
 
 const fileOptions = {
     dataDirectory: demo ? 'https://raw.githubusercontent.com/RaymanNg/3D-Wind-Field/master/data/' : '../data/',
-    dataFile: "demo.nc",
-    glslDirectory: demo ? '../Cesium-3D-Wind/glsl/' : 'glsl/'
+    dataFile: "gfs_20260226_00z.nc",
+    glslDirectory: demo ? '../Cesium-3D-Wind/glsl/' : 'glsl/',
+    webApiUrl: "http://localhost:5131/api/winddata/nc"
 }
 
 const defaultParticleSystemOptions = {
@@ -40,6 +41,7 @@ class Panel {
 
         this.globeLayer = defaultLayerOptions.globeLayer;
         this.WMS_URL = defaultLayerOptions.WMS_URL;
+        this.dataDate = "20260226_00Z";  // 数据日期显示
 
         var layerNames = [];
         globeLayers.forEach(function (layer) {
@@ -66,6 +68,7 @@ class Panel {
 
         window.onload = function () {
             var gui = new dat.GUI({ autoPlace: false });
+            gui.add(that, 'dataDate').name('数据日期').listen();
             gui.add(that, 'maxParticles', 1, 256 * 256, 1).onFinishChange(onParticleSystemOptionsChange);
             gui.add(that, 'particleHeight', 1, 10000, 1).onFinishChange(onParticleSystemOptionsChange);
             gui.add(that, 'fadeOpacity', 0.90, 0.999, 0.001).onFinishChange(onParticleSystemOptionsChange);
