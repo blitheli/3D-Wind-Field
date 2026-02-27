@@ -23,7 +23,9 @@ void main() {
     if (pointsDepth < globeDepth) {
         outputColor = outputColor + pointsColor;
     }
-    if (trailsDepth < globeDepth) {
+    // 尾迹：深度测试通过则叠加；若深度单位不一致导致总不通过，则当有尾迹内容时也叠加
+    bool showTrails = (trailsDepth < globeDepth) || (trailsDepth < 0.9999 && length(trailsColor.rgb) > 0.01);
+    if (showTrails) {
         outputColor = outputColor + trailsColor;
     }
     gl_FragDepth = min(pointsDepth, trailsDepth);

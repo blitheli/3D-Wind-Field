@@ -112,7 +112,8 @@ vec3 convertSpeedUnitToLonLat(vec3 lonLatLev, vec3 speed) {
 
 vec3 calculateSpeedByRungeKutta2(vec3 lonLatLev) {
     // see https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods#Second-order_methods_with_two_stages for detail
-    const float h = 0.5;
+    // h 越大，每步位移越大，粒子形成的线越长（0.5→1.2）
+    const float h = 1.2;
 
     vec3 y_n = lonLatLev;
     vec3 f_n = linearInterpolation(lonLatLev);
@@ -132,7 +133,8 @@ float calculateWindNorm(vec3 speed) {
 }
 
 void main() {
-    speedScaleFactor = speedFactor * pixelSize;
+    // 内部缩放 0.5 使粒子速度适中
+    speedScaleFactor = speedFactor * pixelSize * 0.5;
 
     // texture coordinate must be normalized
     vec3 lonLatLev = texture(currentParticlesPosition, v_textureCoordinates).rgb;

@@ -2,9 +2,9 @@ var demo = Cesium.defaultValue(demo, false);
 
 const fileOptions = {
     dataDirectory: demo ? 'https://raw.githubusercontent.com/RaymanNg/3D-Wind-Field/master/data/' : '../data/',
-    dataFile: "gfs_20260226_00z.nc",
+    dataFile: demo ? "demo.nc" : "gfs_20260226_00z.nc",
     currentDataFile: "gfs_20260226_00z.nc",     //  保存当前使用    
-    glslDirectory: demo ? '../Cesium-3D-Wind/glsl/' : 'glsl/',
+    glslDirectory: (typeof glslDirectory !== 'undefined' ? glslDirectory : (demo ? '../Cesium-3D-Wind/glsl/' : 'glsl/')),
     webApiUrl: "http://localhost:5131/api/winddata/nc",
     // 可手动指定WMS URL，如果设置了此值，将优先使用此URL而不是自动生成的
     // 如果为null或空字符串，则使用自动生成的URL
@@ -48,7 +48,7 @@ function generateWMSUrlFromDataFile(dataFile) {
 const defaultParticleSystemOptions = {
     maxParticles: 64 * 64,
     particleHeight: 100.0,
-    fadeOpacity: 0.996,
+    fadeOpacity: 0.999,  // 尾迹更长（每帧保留 99.9%）
     dropRate: 0.003,
     dropRateBump: 0.01,
     speedFactor: 1.0,

@@ -27,7 +27,11 @@
 <body>
   <div id="cesiumContainer"></div>
   <script>
-    console.log('[Init] 页面开始加载');
+    // demo=true: 从 GitHub 加载 demo.nc，无需本地 data
+    var demo = true;
+    // 从 Cesium-3D-Wind 根目录打开时，GLSL 路径为 glsl/
+    var glslDirectory = 'glsl/';
+    console.log('[Init] 页面开始加载, demo=' + demo);
     console.log('[Init] Cesium 版本:', Cesium.VERSION);
     
     // 设置 Cesium Ion 访问令牌

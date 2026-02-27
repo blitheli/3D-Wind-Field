@@ -3,7 +3,7 @@ class Wind3D {
         var options = {
             // use Sentinel-2 instead of the default Bing Maps because Bing Maps sessions is limited
             imageryProvider: new Cesium.IonImageryProvider({ assetId: 3954 }),
-            baseLayerPicker: false,
+            baseLayerPicker: true,
             geocoder: false,
             infoBox: false,
             fullscreenElement: 'cesiumContainer',
@@ -406,9 +406,9 @@ class Wind3D {
                 // 如果鼠标不在球面上，尝试从相机射线获取
                 var ray = that.camera.getPickRay(movement.endPosition);
                 if (ray) {
-                    var intersection = that.scene.globe.ellipsoid.intersect(ray);
+                    var intersection = Cesium.IntersectionTests.rayEllipsoid(ray, that.scene.globe.ellipsoid);
                     if (intersection) {
-                        cartesian = intersection;
+                        cartesian = Cesium.Ray.getPoint(ray, intersection.start);
                     }
                 }
             }
